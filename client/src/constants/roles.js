@@ -1,0 +1,7 @@
+export const MANAGEMENT_ROLES = ["admin", "hr", "manager", "general_manager"];
+export const EMPLOYEE_MANAGEMENT_ROLES = ["admin", "hr", "manager", "general_manager"];
+export const LEAVE_MANAGEMENT_ROLES = ["admin", "hr", "manager", "general_manager"];
+export const LEAVE_APPROVER_ROLES = ["admin", "hr", "manager", "general_manager"];
+export const HR_MAX_APPROVAL_DAYS = 4;
+export const PAYROLL_MANAGEMENT_ROLES = ["admin"];
+export const LETTER_MANAGEMENT_ROLES = ["admin"];
