@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Calculator,
   CalendarDays,
@@ -7,12 +8,14 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  Menu,
   ReceiptText,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { FilePreviewModal, LeaveDecisionModal } from "../components/PortalModals";
+import { DeleteEmployeeModal, FilePreviewModal, LeaveDecisionModal } from "../components/PortalModals";
 import { DashboardPage } from "../pages/DashboardPage";
 import { EmployeeFormPage } from "../pages/EmployeeFormPage";
 import { EmployeesListPage } from "../pages/EmployeesListPage";
@@ -29,6 +32,7 @@ export function AuthenticatedLayout({ app }) {
     navOpen,
     toggleNavGroup,
     message,
+    messageVariant,
     canManageEmployees,
     canManageLeaves,
     canViewLettersSection,
@@ -36,9 +40,69 @@ export function AuthenticatedLayout({ app }) {
     canManagePayroll,
   } = app;
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileNavOpen]);
+
   return (
-    <div className="layout-shell">
-      <aside className="sidebar glass">
+    <div className={`layout-shell ${mobileNavOpen ? "nav-open" : ""}`}>
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="nav-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      <header className="mobile-topbar glass">
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileNavOpen}
+          onClick={() => setMobileNavOpen((open) => !open)}
+        >
+          {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <div className="mobile-topbar-brand">
+          <img src="/logo.png" alt="" className="mobile-topbar-logo" aria-hidden="true" />
+          <span className="mobile-topbar-title">Basirah HR</span>
+        </div>
+      </header>
+
+      <main className="app-shell">
+        {message && (
+          <p className={`app-toast message message--${messageVariant}`} role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage app={app} />} />
+          <Route path="/employees" element={<Navigate to="/employees/list" replace />} />
+          <Route path="/employees/add" element={<EmployeeFormPage app={app} />} />
+          <Route path="/employees/list" element={<EmployeesListPage app={app} />} />
+          <Route path="/leaves" element={<LeavesPage app={app} />} />
+          <Route path="/reference-letters" element={<ReferenceLettersPage app={app} />} />
+          <Route path="/salary-slips" element={<SalarySlipsListPage app={app} />} />
+          <Route path="/salary-slips/payroll" element={<SalaryPayrollPage app={app} />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </main>
+
+      <aside className={`sidebar glass ${mobileNavOpen ? "is-open" : ""}`}>
         <div className="sidebar-brand">
           <img src="/logo.png" alt="Basirah Logo" className="brand-logo sidebar-logo" />
           <span className="sidebar-role-badge">{(user.designation || user.role).toUpperCase()}</span>
@@ -155,24 +219,9 @@ export function AuthenticatedLayout({ app }) {
         </button>
       </aside>
 
-      <main className="app-shell">
-        {message && <p className="message">{message}</p>}
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage app={app} />} />
-          <Route path="/employees" element={<Navigate to="/employees/list" replace />} />
-          <Route path="/employees/add" element={<EmployeeFormPage app={app} />} />
-          <Route path="/employees/list" element={<EmployeesListPage app={app} />} />
-          <Route path="/leaves" element={<LeavesPage app={app} />} />
-          <Route path="/reference-letters" element={<ReferenceLettersPage app={app} />} />
-          <Route path="/salary-slips" element={<SalarySlipsListPage app={app} />} />
-          <Route path="/salary-slips/payroll" element={<SalaryPayrollPage app={app} />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </main>
-
       <LeaveDecisionModal app={app} />
       <FilePreviewModal app={app} />
+      <DeleteEmployeeModal app={app} />
     </div>
   );
 }

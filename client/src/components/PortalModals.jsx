@@ -1,4 +1,4 @@
-import { Download, ExternalLink, FileText, Image, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, Download, ExternalLink, FileText, Image, ShieldCheck, Trash2, X } from "lucide-react";
 
 export function LeaveDecisionModal({ app }) {
   const { leaveDecisionModal, setLeaveDecisionModal, closeLeaveDecisionModal, submitLeaveDecisionFromModal } = app;
@@ -82,6 +82,52 @@ export function FilePreviewModal({ app }) {
           ) : (
             <img src={filePreview.url} alt={filePreview.title || "Preview"} className="file-preview-image" />
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DeleteEmployeeModal({ app }) {
+  const { deleteEmployeeModal, closeDeleteEmployeeModal, confirmDeleteEmployee, deletingEmployee } = app;
+  if (!deleteEmployeeModal.open) return null;
+
+  const displayName = deleteEmployeeModal.fullName || "this user";
+  const code = deleteEmployeeModal.employeeCode;
+
+  return (
+    <div className="modal-overlay" onClick={closeDeleteEmployeeModal} role="dialog" aria-modal="true" aria-labelledby="delete-user-title">
+      <div className="modal-card decision-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="decision-modal-header">
+          <span className="decision-modal-icon is-delete">
+            <AlertTriangle size={20} />
+          </span>
+          <div className="decision-modal-titles">
+            <h4 id="delete-user-title">Delete user?</h4>
+            <p>
+              You are about to permanently remove <strong>{displayName}</strong>
+              {code ? ` (${code})` : ""}. Their leaves, salary slips, and reference letters will also be deleted.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={closeDeleteEmployeeModal}
+            disabled={deletingEmployee}
+            aria-label="Close"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </header>
+        <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+          <button type="button" className="table-action-btn reject" onClick={closeDeleteEmployeeModal} disabled={deletingEmployee}>
+            Cancel
+          </button>
+          <button type="button" className="table-action-btn reject-strong" onClick={confirmDeleteEmployee} disabled={deletingEmployee}>
+            <Trash2 size={16} style={{ marginRight: 6, verticalAlign: "middle" }} />
+            {deletingEmployee ? "Deleting…" : "Delete user"}
+          </button>
         </div>
       </div>
     </div>

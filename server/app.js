@@ -5,6 +5,7 @@ require("./db");
 
 const { uploadsDir } = require("./config/paths");
 const { CLIENT_URL } = require("./config/constants");
+const { securityHeaders } = require("./middleware/securityHeaders");
 const authRoutes = require("./routes/auth");
 const employeeRoutes = require("./routes/employees");
 const leavesRoutes = require("./routes/leaves");
@@ -13,6 +14,8 @@ const salarySlipsRoutes = require("./routes/salarySlips");
 const payrollRoutes = require("./routes/payroll");
 
 const app = express();
+
+app.use(securityHeaders);
 
 const allowedOrigins = (CLIENT_URL || "")
   .split(",")

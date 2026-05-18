@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Image, Trash2, Upload } from "lucide-react";
 
-export function UploadCard({ label, accept, fileValue, onFileChange, isImage }) {
+export function UploadCard({ label, accept, fileValue, onFileChange, isImage, required = false, error = "" }) {
   const [previewUrl, setPreviewUrl] = useState("");
 
   useEffect(() => {
@@ -15,11 +15,14 @@ export function UploadCard({ label, accept, fileValue, onFileChange, isImage }) 
   }, [fileValue, isImage]);
 
   return (
-    <div className="upload-card">
-      <label className={`upload-dropzone ${fileValue ? "has-file" : ""}`}>
+    <div className={`upload-card ${error ? "upload-card--invalid" : ""}`}>
+      <label className={`upload-dropzone ${fileValue ? "has-file" : ""} ${error ? "upload-dropzone--invalid" : ""}`}>
         <input type="file" accept={accept} onChange={(e) => onFileChange(e.target.files?.[0] || null)} />
         <div className="upload-icon-wrap">{previewUrl ? <Image size={20} /> : <Upload size={20} />}</div>
-        <strong>{label}</strong>
+        <strong>
+          {label}
+          {required ? " *" : ""}
+        </strong>
         <small>{fileValue ? "Click to replace file" : "Click to upload"}</small>
       </label>
       {fileValue && (
@@ -41,6 +44,11 @@ export function UploadCard({ label, accept, fileValue, onFileChange, isImage }) 
           <span>Preview not available for this file type</span>
         </div>
       )}
+      {error ? (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

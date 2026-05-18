@@ -7,7 +7,7 @@ export function EmployeesListPage({ app }) {
     canManageEmployees,
     employees,
     startEditEmployee,
-    deleteEmployee,
+    openDeleteEmployeeModal,
     openFilePreview,
   } = app;
   const navigate = useNavigate();
@@ -122,7 +122,7 @@ export function EmployeesListPage({ app }) {
                       className="icon-btn-action delete"
                       title="Delete user"
                       aria-label="Delete user"
-                      onClick={() => deleteEmployee(emp.id)}
+                      onClick={() => openDeleteEmployeeModal(emp)}
                     >
                       <Trash2 size={16} />
                     </button>

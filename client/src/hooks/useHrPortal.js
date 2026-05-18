@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { validateEmployeeForm } from "../utils/employeeValidation";
+import {
+  validateLeaveForm,
+  validateLoginForm,
+  validatePayrollSelection,
+  validateReferenceForm,
+} from "../utils/formValidation";
 import {
   MANAGEMENT_ROLES,
   EMPLOYEE_MANAGEMENT_ROLES,
@@ -20,9 +27,21 @@ export function useHrPortal() {
   const [slips, setSlips] = useState([]);
   const [referenceLetters, setReferenceLetters] = useState([]);
   const [message, setMessage] = useState("");
+  const [messageVariant, setMessageVariant] = useState("info");
+  const [savingEmployee, setSavingEmployee] = useState(false);
+  const [employeeFormErrors, setEmployeeFormErrors] = useState({});
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
 
+  function showMessage(text, variant = "info") {
+    setMessage(text);
+    setMessageVariant(variant);
+  }
+
   const [loginForm, setLoginForm] = useState({ email: "admin@basirah.local", password: "admin123" });
+  const [loginFormErrors, setLoginFormErrors] = useState({});
+  const [leaveFormErrors, setLeaveFormErrors] = useState({});
+  const [referenceFormErrors, setReferenceFormErrors] = useState({});
+  const [payrollFormErrors, setPayrollFormErrors] = useState({});
   const [employeeForm, setEmployeeForm] = useState({
     employeeId: "",
     fullName: "",
@@ -61,6 +80,13 @@ export function useHrPortal() {
     title: "",
     subtitle: "",
   });
+  const [deleteEmployeeModal, setDeleteEmployeeModal] = useState({
+    open: false,
+    employeeId: null,
+    fullName: "",
+    employeeCode: "",
+  });
+  const [deletingEmployee, setDeletingEmployee] = useState(false);
   const [referenceForm, setReferenceForm] = useState({ purpose: "", details: "", addressedTo: "" });
   const [referenceNotes, setReferenceNotes] = useState({});
   const [salaryCalcForm, setSalaryCalcForm] = useState({
@@ -100,7 +126,7 @@ export function useHrPortal() {
           setLeaves([]);
           setSlips([]);
           setReferenceLetters([]);
-          setMessage("Session expired. Please login again.");
+          showMessage("Session expired. Please login again.", "error");
           navigate("/", { replace: true });
         }
         return Promise.reject(error);
@@ -114,6 +140,13 @@ export function useHrPortal() {
 
   async function login(e) {
     e.preventDefault();
+    const validation = validateLoginForm(loginForm);
+    if (!validation.valid) {
+      setLoginFormErrors(validation.errors);
+      showMessage("Please fix the highlighted errors", "error");
+      return;
+    }
+    setLoginFormErrors({});
     try {
       const { data } = await api.post("/auth/login", loginForm);
       setToken(data.token);
@@ -122,7 +155,7 @@ export function useHrPortal() {
       localStorage.setItem("user", JSON.stringify(data.user));
       setMessage(`Welcome ${data.user.fullName}`);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Login failed");
+      showMessage(err.response?.data?.message || "Login failed", "error");
     }
   }
 
@@ -141,7 +174,13 @@ export function useHrPortal() {
     navigate("/", { replace: true });
   }
 
-  async function fetchAll() {
+  async function refreshEmployees() {
+    if (!token || !canManageEmployees) return;
+    const { data } = await api.get("/employees", { headers: authHeaders });
+    setEmployees(data);
+  }
+
+  async function fetchAll({ silent = false } = {}) {
     if (!token) return;
     try {
       const requests = [];
@@ -168,7 +207,7 @@ export function useHrPortal() {
       await Promise.all(requests);
     } catch (err) {
       if (err.response?.status === 401) return;
-      setMessage(err.response?.data?.message || "Failed loading data");
+      if (!silent) showMessage(err.response?.data?.message || "Failed loading data", "error");
     }
   }
 
@@ -200,6 +239,20 @@ export function useHrPortal() {
   }, [leaveDecisionModal.open]);
 
   useEffect(() => {
+    if (!deleteEmployeeModal.open) return undefined;
+    function onKey(e) {
+      if (e.key === "Escape" && !deletingEmployee) closeDeleteEmployeeModal();
+    }
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [deleteEmployeeModal.open, deletingEmployee]);
+
+  useEffect(() => {
     if (!message) return undefined;
     const timeoutId = setTimeout(() => setMessage(""), 3500);
     return () => clearTimeout(timeoutId);
@@ -207,14 +260,35 @@ export function useHrPortal() {
 
   async function saveEmployee(e) {
     e.preventDefault();
+    if (savingEmployee) return;
+
+    const wasEditing = Boolean(editingEmployeeId);
+    const editingEmployee = wasEditing ? employees.find((emp) => emp.id === editingEmployeeId) : null;
+    const validation = validateEmployeeForm(employeeForm, {
+      isEdit: wasEditing,
+      hasIdFront: Boolean(employeeForm.idFront || editingEmployee?.idFrontPath),
+      hasIdBack: Boolean(employeeForm.idBack || editingEmployee?.idBackPath),
+      hasEmploymentLetter: Boolean(employeeForm.employmentLetter || editingEmployee?.employmentLetterPath),
+    });
+
+    if (!validation.valid) {
+      setEmployeeFormErrors(validation.errors);
+      showMessage("Please fix the highlighted errors before saving", "error");
+      return;
+    }
+
+    setEmployeeFormErrors({});
+    setSavingEmployee(true);
     try {
       const body = new FormData();
-      if (editingEmployeeId) {
+      if (wasEditing) {
         body.append("employeeId", employeeForm.employeeId);
       }
-      body.append("fullName", employeeForm.fullName);
-      body.append("email", employeeForm.email);
-      body.append("password", employeeForm.password);
+      body.append("fullName", employeeForm.fullName.trim());
+      body.append("email", employeeForm.email.trim());
+      if (!wasEditing || employeeForm.password) {
+        body.append("password", employeeForm.password);
+      }
       body.append("birthdate", employeeForm.birthdate);
       body.append("designation", employeeForm.designation);
       body.append("role", employeeForm.role);
@@ -226,13 +300,12 @@ export function useHrPortal() {
       if (employeeForm.idBack) body.append("idBack", employeeForm.idBack);
       if (employeeForm.employmentLetter) body.append("employmentLetter", employeeForm.employmentLetter);
 
-      if (editingEmployeeId) {
+      if (wasEditing) {
         await api.put(`/employees/${editingEmployeeId}`, body, { headers: authHeaders });
-        setMessage("User updated");
       } else {
         await api.post("/employees", body, { headers: authHeaders });
-        setMessage("User created");
       }
+
       setEditingEmployeeId(null);
       setEmployeeForm({
         employeeId: "",
@@ -250,14 +323,25 @@ export function useHrPortal() {
         idBack: null,
         employmentLetter: null,
       });
-      fetchAll();
+
+      await refreshEmployees();
+      showMessage(wasEditing ? "User updated successfully" : "User added successfully", "success");
+      navigate("/employees/list");
     } catch (err) {
-      setMessage(err.response?.data?.message || "Could not save user");
+      const apiErrors = err.response?.data?.errors;
+      if (apiErrors && typeof apiErrors === "object") {
+        setEmployeeFormErrors(apiErrors);
+      }
+      const apiMessage = err.response?.data?.message;
+      showMessage(apiMessage || err.message || "Could not save user", "error");
+    } finally {
+      setSavingEmployee(false);
     }
   }
 
   function startEditEmployee(emp) {
     setEditingEmployeeId(emp.id);
+    setEmployeeFormErrors({});
     setEmployeeForm({
       employeeId: emp.employeeId,
       fullName: emp.fullName,
@@ -276,14 +360,67 @@ export function useHrPortal() {
     });
   }
 
-  async function deleteEmployee(id) {
-    await api.delete(`/employees/${id}`, { headers: authHeaders });
-    setMessage("User deleted");
-    fetchAll();
+  function openDeleteEmployeeModal(emp) {
+    setDeleteEmployeeModal({
+      open: true,
+      employeeId: emp.id,
+      fullName: emp.fullName || "",
+      employeeCode: emp.employeeId || "",
+    });
+  }
+
+  function closeDeleteEmployeeModal() {
+    if (deletingEmployee) return;
+    setDeleteEmployeeModal({ open: false, employeeId: null, fullName: "", employeeCode: "" });
+  }
+
+  async function confirmDeleteEmployee() {
+    const id = deleteEmployeeModal.employeeId;
+    if (!id || deletingEmployee) return;
+
+    setDeletingEmployee(true);
+    try {
+      await api.delete(`/employees/${id}`, { headers: authHeaders });
+      if (Number(editingEmployeeId) === Number(id)) {
+        setEditingEmployeeId(null);
+        setEmployeeForm({
+          employeeId: "",
+          fullName: "",
+          email: "",
+          password: "",
+          birthdate: "",
+          designation: "",
+          role: "employee",
+          phone: "",
+          address: "",
+          joinedDate: "",
+          monthlySalary: "",
+          idFront: null,
+          idBack: null,
+          employmentLetter: null,
+        });
+        setEmployeeFormErrors({});
+      }
+      setDeleteEmployeeModal({ open: false, employeeId: null, fullName: "", employeeCode: "" });
+      await refreshEmployees();
+      fetchAll({ silent: true });
+      showMessage("User deleted successfully", "success");
+    } catch (err) {
+      showMessage(err.response?.data?.message || "Could not delete user", "error");
+    } finally {
+      setDeletingEmployee(false);
+    }
   }
 
   async function applyLeave(e) {
     e.preventDefault();
+    const validation = validateLeaveForm(leaveForm);
+    if (!validation.valid) {
+      setLeaveFormErrors(validation.errors);
+      showMessage("Please fix the highlighted errors before submitting", "error");
+      return;
+    }
+    setLeaveFormErrors({});
     try {
       const body = new FormData();
       body.append("startDate", leaveForm.startDate);
@@ -369,6 +506,13 @@ export function useHrPortal() {
 
   async function applyReferenceLetter(e) {
     e.preventDefault();
+    const validation = validateReferenceForm(referenceForm);
+    if (!validation.valid) {
+      setReferenceFormErrors(validation.errors);
+      showMessage("Please fix the highlighted errors before submitting", "error");
+      return;
+    }
+    setReferenceFormErrors({});
     try {
       await api.post("/reference-letters", referenceForm, { headers: authHeaders });
       setReferenceForm({ purpose: "", details: "", addressedTo: "" });
@@ -406,10 +550,14 @@ export function useHrPortal() {
   }
 
   async function loadSalaryReport() {
-    if (!canManagePayroll || !salaryCalcForm.month) {
-      setMessage("Please select a month");
+    if (!canManagePayroll) return;
+    const validation = validatePayrollSelection(salaryCalcForm);
+    if (!validation.valid) {
+      setPayrollFormErrors(validation.errors);
+      showMessage("Please select a month", "error");
       return;
     }
+    setPayrollFormErrors({});
     setPayrollLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
@@ -539,11 +687,24 @@ export function useHrPortal() {
     slips,
     referenceLetters,
     message,
+    messageVariant,
     setMessage,
+    showMessage,
+    savingEmployee,
+    employeeFormErrors,
+    setEmployeeFormErrors,
     editingEmployeeId,
     setEditingEmployeeId,
     loginForm,
     setLoginForm,
+    loginFormErrors,
+    setLoginFormErrors,
+    leaveFormErrors,
+    setLeaveFormErrors,
+    referenceFormErrors,
+    setReferenceFormErrors,
+    payrollFormErrors,
+    setPayrollFormErrors,
     employeeForm,
     setEmployeeForm,
     leaveForm,
@@ -587,7 +748,11 @@ export function useHrPortal() {
     fetchAll,
     saveEmployee,
     startEditEmployee,
-    deleteEmployee,
+    openDeleteEmployeeModal,
+    closeDeleteEmployeeModal,
+    confirmDeleteEmployee,
+    deleteEmployeeModal,
+    deletingEmployee,
     applyLeave,
     uploadLeaveSupportingDoc,
     updateLeaveStatus,

@@ -1,5 +1,6 @@
 import { ArrowUpRight, FileDown } from "lucide-react";
 import { Navigate, NavLink } from "react-router-dom";
+import { FieldError } from "../components/FieldError";
 
 export function SalaryPayrollPage({ app }) {
   const {
@@ -7,6 +8,8 @@ export function SalaryPayrollPage({ app }) {
     employees,
     salaryCalcForm,
     setSalaryCalcForm,
+    payrollFormErrors,
+    setPayrollFormErrors,
     loadSalaryReport,
     generateSalarySlip,
     payrollLoading,
@@ -41,9 +44,17 @@ export function SalaryPayrollPage({ app }) {
             ))}
           </select>
         </div>
-        <div className="field">
+        <div className={`field ${payrollFormErrors.month ? "field--invalid" : ""}`}>
           <label>Month *</label>
-          <input type="month" value={salaryCalcForm.month} onChange={(e) => setSalaryCalcForm({ ...salaryCalcForm, month: e.target.value })} />
+          <input
+            type="month"
+            value={salaryCalcForm.month}
+            onChange={(e) => {
+              setSalaryCalcForm({ ...salaryCalcForm, month: e.target.value });
+              if (payrollFormErrors.month) setPayrollFormErrors((prev) => ({ ...prev, month: undefined }));
+            }}
+          />
+          <FieldError message={payrollFormErrors.month} />
         </div>
         <div className="field">
           <label>Monthly Salary</label>

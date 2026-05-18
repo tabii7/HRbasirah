@@ -1,106 +1,164 @@
 import { Navigate } from "react-router-dom";
+import { FieldError } from "../components/FieldError";
 import { UploadCard } from "../components/UploadCard";
+import { sanitizeGeneralText, sanitizePersonName, sanitizePhone, sanitizeSalary } from "../utils/formValidation";
 
 export function EmployeeFormPage({ app }) {
-  const { canManageEmployees, editingEmployeeId, employeeForm, setEmployeeForm, saveEmployee } = app;
+  const {
+    canManageEmployees,
+    editingEmployeeId,
+    employeeForm,
+    setEmployeeForm,
+    employeeFormErrors,
+    setEmployeeFormErrors,
+    saveEmployee,
+    savingEmployee,
+  } = app;
+
   if (!canManageEmployees) return <Navigate to="/dashboard" replace />;
+
+  function updateForm(patch) {
+    setEmployeeForm({ ...employeeForm, ...patch });
+    const nextKeys = Object.keys(patch);
+    if (nextKeys.length && Object.keys(employeeFormErrors).length) {
+      setEmployeeFormErrors((prev) => {
+        const next = { ...prev };
+        nextKeys.forEach((key) => delete next[key]);
+        return next;
+      });
+    }
+  }
 
   return (
     <section className="panel glass">
       <div className="page-head">
         <h3>{editingEmployeeId ? "Edit User Profile" : "Create New User"}</h3>
-        <p>Complete profile details and attach required documents.</p>
+        <p>All fields are required. Complete profile details and attach documents.</p>
       </div>
-      <form className="grid" onSubmit={saveEmployee}>
+
+      <form className="grid" onSubmit={saveEmployee} noValidate>
         <div className="form-section">
           <h4>Personal Details</h4>
           <div className="two">
-            <div className="field">
+            <div className={`field ${employeeFormErrors.fullName ? "field--invalid" : ""}`}>
               <label>Full Name *</label>
-              <input value={employeeForm.fullName} onChange={(e) => setEmployeeForm({ ...employeeForm, fullName: e.target.value })} required />
+              <input
+                value={employeeForm.fullName}
+                onChange={(e) => updateForm({ fullName: sanitizePersonName(e.target.value) })}
+                autoComplete="name"
+                inputMode="text"
+              />
+              <FieldError message={employeeFormErrors.fullName} />
             </div>
-            <div className="field">
+            <div className={`field ${employeeFormErrors.email ? "field--invalid" : ""}`}>
               <label>Email Address *</label>
-              <input type="email" value={employeeForm.email} onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })} required />
+              <input
+                type="email"
+                value={employeeForm.email}
+                onChange={(e) => updateForm({ email: e.target.value.trim() })}
+                autoComplete="email"
+              />
+              <FieldError message={employeeFormErrors.email} />
             </div>
-            <div className="field">
-              <label>Password {!editingEmployeeId ? "*" : ""}</label>
+            <div className={`field ${employeeFormErrors.password ? "field--invalid" : ""}`}>
+              <label>Password {editingEmployeeId ? "(optional — leave blank to keep current)" : "*"}</label>
               <input
                 type="password"
                 value={employeeForm.password}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
-                required={!editingEmployeeId}
+                onChange={(e) => updateForm({ password: e.target.value })}
+                autoComplete="new-password"
               />
+              <FieldError message={employeeFormErrors.password} />
+            </div>
+            <div className={`field ${employeeFormErrors.birthdate ? "field--invalid" : ""}`}>
+              <label>Birth Date *</label>
+              <input type="date" value={employeeForm.birthdate} onChange={(e) => updateForm({ birthdate: e.target.value })} />
+              <FieldError message={employeeFormErrors.birthdate} />
+            </div>
+            <div className={`field ${employeeFormErrors.designation ? "field--invalid" : ""}`}>
+              <label>Designation *</label>
+              <input
+                value={employeeForm.designation}
+                onChange={(e) => updateForm({ designation: sanitizeGeneralText(e.target.value) })}
+              />
+              <FieldError message={employeeFormErrors.designation} />
             </div>
             <div className="field">
-              <label>Birth Date</label>
-              <input type="date" value={employeeForm.birthdate} onChange={(e) => setEmployeeForm({ ...employeeForm, birthdate: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>Designation</label>
-              <input value={employeeForm.designation} onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>Role</label>
-              <select value={employeeForm.role} onChange={(e) => setEmployeeForm({ ...employeeForm, role: e.target.value })}>
+              <label>Role *</label>
+              <select value={employeeForm.role} onChange={(e) => updateForm({ role: e.target.value })}>
                 <option value="employee">Employee</option>
                 <option value="hr">HR</option>
                 <option value="manager">Manager</option>
                 <option value="general_manager">General Manager</option>
               </select>
             </div>
-            <div className="field">
-              <label>Phone Number</label>
-              <input value={employeeForm.phone} onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>Joined Date</label>
-              <input type="date" value={employeeForm.joinedDate} onChange={(e) => setEmployeeForm({ ...employeeForm, joinedDate: e.target.value })} />
-            </div>
-            <div className="field">
-              <label>Monthly Salary</label>
+            <div className={`field ${employeeFormErrors.phone ? "field--invalid" : ""}`}>
+              <label>Phone Number *</label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={employeeForm.monthlySalary}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, monthlySalary: e.target.value })}
+                value={employeeForm.phone}
+                onChange={(e) => updateForm({ phone: sanitizePhone(e.target.value) })}
+                inputMode="tel"
               />
+              <FieldError message={employeeFormErrors.phone} />
             </div>
-            <div className="field address-field">
-              <label>Address</label>
-              <textarea value={employeeForm.address} onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })} rows={3} />
+            <div className={`field ${employeeFormErrors.joinedDate ? "field--invalid" : ""}`}>
+              <label>Joined Date *</label>
+              <input type="date" value={employeeForm.joinedDate} onChange={(e) => updateForm({ joinedDate: e.target.value })} />
+              <FieldError message={employeeFormErrors.joinedDate} />
+            </div>
+            <div className={`field ${employeeFormErrors.monthlySalary ? "field--invalid" : ""}`}>
+              <label>Monthly Salary *</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={employeeForm.monthlySalary}
+                onChange={(e) => updateForm({ monthlySalary: sanitizeSalary(e.target.value) })}
+              />
+              <FieldError message={employeeFormErrors.monthlySalary} />
+            </div>
+            <div className={`field address-field ${employeeFormErrors.address ? "field--invalid" : ""}`}>
+              <label>Address *</label>
+              <textarea value={employeeForm.address} onChange={(e) => updateForm({ address: e.target.value })} rows={3} />
+              <FieldError message={employeeFormErrors.address} />
             </div>
           </div>
         </div>
 
         <div className="form-section">
-          <h4>Documents</h4>
+          <h4>Documents *</h4>
           <div className="three">
             <UploadCard
               label="ID Front"
+              required
               accept="image/*,.pdf"
               fileValue={employeeForm.idFront}
-              onFileChange={(file) => setEmployeeForm({ ...employeeForm, idFront: file })}
+              onFileChange={(file) => updateForm({ idFront: file })}
               isImage
+              error={employeeFormErrors.idFront}
             />
             <UploadCard
               label="ID Back"
+              required
               accept="image/*,.pdf"
               fileValue={employeeForm.idBack}
-              onFileChange={(file) => setEmployeeForm({ ...employeeForm, idBack: file })}
+              onFileChange={(file) => updateForm({ idBack: file })}
               isImage
+              error={employeeFormErrors.idBack}
             />
             <UploadCard
               label="Employment Letter (PDF)"
+              required
               accept="application/pdf"
               fileValue={employeeForm.employmentLetter}
-              onFileChange={(file) => setEmployeeForm({ ...employeeForm, employmentLetter: file })}
+              onFileChange={(file) => updateForm({ employmentLetter: file })}
+              error={employeeFormErrors.employmentLetter}
             />
           </div>
         </div>
 
-        <button type="submit">{editingEmployeeId ? "Update User" : "Create User"}</button>
+        <button type="submit" disabled={savingEmployee}>
+          {savingEmployee ? "Saving…" : editingEmployeeId ? "Update User" : "Create User"}
+        </button>
       </form>
     </section>
   );

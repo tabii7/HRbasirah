@@ -28,7 +28,7 @@ export function DashboardPage({ app }) {
   } = app;
 
   return (
-    <>
+    <div className="dashboard-page">
       <section className="panel glass dashboard-hero">
         <div>
           <p className="eyebrow">Operations Overview</p>
@@ -135,6 +135,6 @@ export function DashboardPage({ app }) {
           </div>
         </article>
       </section>
-    </>
+    </div>
   );
 }
