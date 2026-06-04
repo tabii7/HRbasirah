@@ -56,6 +56,21 @@ db.exec(`
     generatedAt TEXT,
     FOREIGN KEY(employeeUserId) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submittedByUserId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    amount REAL NOT NULL,
+    expenseDate TEXT NOT NULL,
+    description TEXT,
+    receiptPath TEXT,
+    status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Approved', 'Rejected')),
+    adminNote TEXT,
+    reviewedAt TEXT,
+    createdAt TEXT NOT NULL,
+    FOREIGN KEY(submittedByUserId) REFERENCES users(id)
+  );
 `);
 
 function ensureUsersRoleConstraint() {
@@ -138,6 +153,10 @@ ensureColumn("salary_slips", "unpaidLeaveDays", "INTEGER");
 ensureColumn("salary_slips", "unpaidLeaveDeduction", "REAL");
 ensureColumn("salary_slips", "grossSalary", "REAL");
 ensureColumn("salary_slips", "netSalary", "REAL");
+ensureColumn("expenses", "status", "TEXT");
+ensureColumn("expenses", "adminNote", "TEXT");
+ensureColumn("expenses", "reviewedAt", "TEXT");
+db.prepare("UPDATE expenses SET status = 'Pending' WHERE status IS NULL OR status = ''").run();
 
 const existingAdmin = db.prepare("SELECT id FROM users WHERE email = ?").get(ADMIN_EMAIL);
 if (!existingAdmin) {

@@ -5,3 +5,6 @@ export const LEAVE_APPROVER_ROLES = ["admin", "hr", "manager", "general_manager"
 export const HR_MAX_APPROVAL_DAYS = 4;
 export const PAYROLL_MANAGEMENT_ROLES = ["admin"];
 export const LETTER_MANAGEMENT_ROLES = ["admin"];
+export const EXPENSE_SUBMIT_ROLES = ["admin", "hr", "manager", "general_manager"];
+export const EXPENSE_VIEW_ROLES = ["admin"];
+export const EXPENSE_APPROVE_ROLES = ["admin"];

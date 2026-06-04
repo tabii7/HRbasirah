@@ -8,6 +8,7 @@ import {
   ReceiptText,
   ShieldCheck,
   Users,
+  Wallet,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -23,6 +24,11 @@ export function DashboardPage({ app }) {
     isEmployee,
     canViewSalarySection,
     canManagePayroll,
+    canViewExpensesSection,
+    canSubmitExpenses,
+    canViewAllExpenses,
+    expenses,
+    pendingExpensesCount,
     pendingLeavesCount,
     approvedLeavesCount,
   } = app;
@@ -33,7 +39,14 @@ export function DashboardPage({ app }) {
         <div>
           <p className="eyebrow">Operations Overview</p>
           <h3>Welcome back, {user.fullName}</h3>
-          <p>{isManagement ? "Manage assigned operations from one place." : "Track your requests, documents, and work profile."}</p>
+          <p>
+            {isManagement
+              ? "Manage assigned operations from one place."
+              : "Track your requests, documents, and work profile."}
+            {isManagement && employees.length === 0 && (
+              <> Add users under <strong>Employees → Add user</strong> to populate the dashboard.</>
+            )}
+          </p>
         </div>
         <div className="hero-chip">
           <Clock3 size={16} />
@@ -108,6 +121,20 @@ export function DashboardPage({ app }) {
                 <ArrowUpRight size={16} />
               </NavLink>
             )}
+            {canSubmitExpenses && (
+              <NavLink to="/expenses/add" className="quick-action">
+                <Wallet size={18} />
+                <span>Add expense</span>
+                <ArrowUpRight size={16} />
+              </NavLink>
+            )}
+            {canViewExpensesSection && (
+              <NavLink to="/expenses/list" className="quick-action">
+                <Wallet size={18} />
+                <span>{canViewAllExpenses ? "All expenses" : "My expenses"}</span>
+                <ArrowUpRight size={16} />
+              </NavLink>
+            )}
           </div>
         </article>
 
@@ -130,6 +157,12 @@ export function DashboardPage({ app }) {
               <div className="activity-item">
                 <span>Registered Users</span>
                 <strong>{employees.length}</strong>
+              </div>
+            )}
+            {canViewExpensesSection && (
+              <div className="activity-item">
+                <span>{canViewAllExpenses ? "Pending Expenses" : "My Expenses"}</span>
+                <strong>{canViewAllExpenses ? pendingExpensesCount : expenses.length}</strong>
               </div>
             )}
           </div>

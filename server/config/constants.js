@@ -7,6 +7,9 @@ const LEAVE_APPROVER_ROLES = ["admin", "hr", "manager", "general_manager"];
 const HR_MAX_APPROVAL_DAYS = 4;
 const SUPER_ADMIN_ROLES = ["admin"];
 const LETTER_MANAGEMENT_ROLES = ["admin"];
+const EXPENSE_SUBMIT_ROLES = ["admin", "hr", "manager", "general_manager"];
+const EXPENSE_VIEW_ROLES = ["admin"];
+const EXPENSE_APPROVE_ROLES = ["admin"];
 const STAFF_ROLES = ["employee", "hr", "manager", "general_manager"];
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@basirah.local";
 
@@ -23,6 +26,9 @@ module.exports = {
   HR_MAX_APPROVAL_DAYS,
   SUPER_ADMIN_ROLES,
   LETTER_MANAGEMENT_ROLES,
+  EXPENSE_SUBMIT_ROLES,
+  EXPENSE_VIEW_ROLES,
+  EXPENSE_APPROVE_ROLES,
   STAFF_ROLES,
   ADMIN_EMAIL,
 };

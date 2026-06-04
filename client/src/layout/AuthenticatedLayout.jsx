@@ -12,6 +12,9 @@ import {
   ReceiptText,
   UserPlus,
   Users,
+  Wallet,
+  Plus,
+  List,
   X,
 } from "lucide-react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
@@ -23,6 +26,8 @@ import { LeavesPage } from "../pages/LeavesPage";
 import { ReferenceLettersPage } from "../pages/ReferenceLettersPage";
 import { SalaryPayrollPage } from "../pages/SalaryPayrollPage";
 import { SalarySlipsListPage } from "../pages/SalarySlipsListPage";
+import { ExpensesAddPage } from "../pages/ExpensesAddPage";
+import { ExpensesListPage } from "../pages/ExpensesListPage";
 
 export function AuthenticatedLayout({ app }) {
   const {
@@ -38,6 +43,9 @@ export function AuthenticatedLayout({ app }) {
     canViewLettersSection,
     canViewSalarySection,
     canManagePayroll,
+    canViewExpensesSection,
+    canSubmitExpenses,
+    canViewAllExpenses,
   } = app;
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -98,6 +106,9 @@ export function AuthenticatedLayout({ app }) {
           <Route path="/reference-letters" element={<ReferenceLettersPage app={app} />} />
           <Route path="/salary-slips" element={<SalarySlipsListPage app={app} />} />
           <Route path="/salary-slips/payroll" element={<SalaryPayrollPage app={app} />} />
+          <Route path="/expenses" element={<Navigate to="/expenses/list" replace />} />
+          <Route path="/expenses/add" element={<ExpensesAddPage app={app} />} />
+          <Route path="/expenses/list" element={<ExpensesListPage app={app} />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -208,6 +219,35 @@ export function AuthenticatedLayout({ app }) {
                       <span>Payroll &amp; reports</span>
                     </NavLink>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {canViewExpensesSection && (
+            <div className="nav-group">
+              <button
+                type="button"
+                className={`nav-group-toggle ${location.pathname.startsWith("/expenses") ? "nav-group-toggle--current" : ""}`}
+                onClick={() => toggleNavGroup("expenses")}
+                aria-expanded={navOpen.expenses}
+              >
+                <Wallet size={18} />
+                <span className="nav-group-label">Expenses</span>
+                {navOpen.expenses ? <ChevronDown size={16} className="nav-chevron" /> : <ChevronRight size={16} className="nav-chevron" />}
+              </button>
+              {navOpen.expenses && (
+                <div className="nav-submenu">
+                  {canSubmitExpenses && (
+                    <NavLink to="/expenses/add" className={({ isActive }) => `nav-item nav-subitem ${isActive ? "active" : ""}`}>
+                      <Plus size={16} />
+                      <span>Add expense</span>
+                    </NavLink>
+                  )}
+                  <NavLink to="/expenses/list" className={({ isActive }) => `nav-item nav-subitem ${isActive ? "active" : ""}`}>
+                    <List size={16} />
+                    <span>{canViewAllExpenses ? "All expenses" : "My expenses"}</span>
+                  </NavLink>
                 </div>
               )}
             </div>
