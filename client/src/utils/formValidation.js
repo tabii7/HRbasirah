@@ -126,3 +126,17 @@ export function validatePayrollSelection(form) {
   if (!form.month) errors.month = "Month is required";
   return { valid: Object.keys(errors).length === 0, errors };
 }
+
+export function validateExpenseForm(form) {
+  const errors = {};
+  const title = String(form.title || "").trim();
+  if (!title) errors.title = "Title is required";
+  else if (title.length < 3) errors.title = "Title must be at least 3 characters";
+
+  if (!form.expenseDate) errors.expenseDate = "Expense date is required";
+
+  const amountError = validateSalary(form.amount, { required: true });
+  if (amountError) errors.amount = amountError.replace("Monthly salary", "Amount");
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}

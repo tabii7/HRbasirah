@@ -12,6 +12,7 @@ const leavesRoutes = require("./routes/leaves");
 const referenceLettersRoutes = require("./routes/referenceLetters");
 const salarySlipsRoutes = require("./routes/salarySlips");
 const payrollRoutes = require("./routes/payroll");
+const expensesRoutes = require("./routes/expenses");
 
 const app = express();
 
@@ -46,5 +47,6 @@ app.use("/api/leaves", leavesRoutes);
 app.use("/api/reference-letters", referenceLettersRoutes);
 app.use("/api/salary-slips", salarySlipsRoutes);
 app.use("/api/payroll", payrollRoutes);
+app.use("/api/expenses", expensesRoutes);
 
 module.exports = app;

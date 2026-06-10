@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node index.js",
-    "start": "node index.js"
+    "dev": "node scripts/dev.js",
+    "start": "node index.js",
+    "stop": "lsof -ti :5001 | xargs kill -9 2>/dev/null || true"
   },
   "keywords": [],
   "author": "",

@@ -7,6 +7,7 @@ import {
   validateLoginForm,
   validatePayrollSelection,
   validateReferenceForm,
+  validateExpenseForm,
 } from "../utils/formValidation";
 import {
   MANAGEMENT_ROLES,
@@ -15,6 +16,9 @@ import {
   LEAVE_APPROVER_ROLES,
   PAYROLL_MANAGEMENT_ROLES,
   LETTER_MANAGEMENT_ROLES,
+  EXPENSE_SUBMIT_ROLES,
+  EXPENSE_VIEW_ROLES,
+  EXPENSE_APPROVE_ROLES,
 } from "../constants/roles";
 
 export function useHrPortal() {
@@ -26,6 +30,7 @@ export function useHrPortal() {
   const [leaves, setLeaves] = useState([]);
   const [slips, setSlips] = useState([]);
   const [referenceLetters, setReferenceLetters] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [message, setMessage] = useState("");
   const [messageVariant, setMessageVariant] = useState("info");
   const [savingEmployee, setSavingEmployee] = useState(false);
@@ -41,6 +46,7 @@ export function useHrPortal() {
   const [loginFormErrors, setLoginFormErrors] = useState({});
   const [leaveFormErrors, setLeaveFormErrors] = useState({});
   const [referenceFormErrors, setReferenceFormErrors] = useState({});
+  const [expenseFormErrors, setExpenseFormErrors] = useState({});
   const [payrollFormErrors, setPayrollFormErrors] = useState({});
   const [employeeForm, setEmployeeForm] = useState({
     employeeId: "",
@@ -88,6 +94,14 @@ export function useHrPortal() {
   });
   const [deletingEmployee, setDeletingEmployee] = useState(false);
   const [referenceForm, setReferenceForm] = useState({ purpose: "", details: "", addressedTo: "" });
+  const [expenseNotes, setExpenseNotes] = useState({});
+  const [expenseForm, setExpenseForm] = useState({
+    title: "",
+    amount: "",
+    expenseDate: "",
+    description: "",
+    receipt: null,
+  });
   const [referenceNotes, setReferenceNotes] = useState({});
   const [salaryCalcForm, setSalaryCalcForm] = useState({
     employeeUserId: "",
@@ -112,6 +126,10 @@ export function useHrPortal() {
   const canViewSalarySection = Boolean(user);
   const canViewLettersSection = isEmployee || canManageLetters;
   const canApplyLeave = ["employee", "hr"].includes(user?.role);
+  const canSubmitExpenses = EXPENSE_SUBMIT_ROLES.includes(user?.role);
+  const canViewAllExpenses = EXPENSE_VIEW_ROLES.includes(user?.role);
+  const canApproveExpenses = EXPENSE_APPROVE_ROLES.includes(user?.role);
+  const canViewExpensesSection = canSubmitExpenses || canViewAllExpenses;
 
   useEffect(() => {
     const interceptorId = api.interceptors.response.use(
@@ -126,6 +144,7 @@ export function useHrPortal() {
           setLeaves([]);
           setSlips([]);
           setReferenceLetters([]);
+          setExpenses([]);
           showMessage("Session expired. Please login again.", "error");
           navigate("/", { replace: true });
         }
@@ -168,6 +187,7 @@ export function useHrPortal() {
     setLeaves([]);
     setSlips([]);
     setReferenceLetters([]);
+    setExpenses([]);
     setPayrollPreview(null);
     setMonthlyReport(null);
     setMessage("Logged out successfully");
@@ -204,16 +224,29 @@ export function useHrPortal() {
       } else {
         setReferenceLetters([]);
       }
+      if (canViewExpensesSection) {
+        requests.push(api.get("/expenses", { headers: authHeaders }).then((res) => setExpenses(res.data)));
+      } else {
+        setExpenses([]);
+      }
       await Promise.all(requests);
     } catch (err) {
       if (err.response?.status === 401) return;
-      if (!silent) showMessage(err.response?.data?.message || "Failed loading data", "error");
+      if (!silent) {
+        const isNetwork = !err.response && (err.code === "ERR_NETWORK" || err.message === "Network Error");
+        showMessage(
+          isNetwork
+            ? "Cannot reach the API. Start the backend: cd server && npm run dev (port 5001)"
+            : err.response?.data?.message || "Failed loading data",
+          "error"
+        );
+      }
     }
   }
 
   useEffect(() => {
     fetchAll();
-  }, [token, user?.role, canManageEmployees, canManageLeaves, canApplyLeave, canViewSalarySection, canViewLettersSection]);
+  }, [token, user?.role, canManageEmployees, canManageLeaves, canApplyLeave, canViewSalarySection, canViewLettersSection, canViewExpensesSection]);
 
   useEffect(() => {
     if (!filePreview.open) return undefined;
@@ -504,6 +537,48 @@ export function useHrPortal() {
     setFilePreview({ open: false, url: "", type: "image", title: "", subtitle: "" });
   }
 
+  async function submitExpense(e) {
+    e.preventDefault();
+    const validation = validateExpenseForm(expenseForm);
+    if (!validation.valid) {
+      setExpenseFormErrors(validation.errors);
+      showMessage("Please fix the highlighted errors before submitting", "error");
+      return;
+    }
+    setExpenseFormErrors({});
+    try {
+      const body = new FormData();
+      body.append("title", expenseForm.title.trim());
+      body.append("amount", expenseForm.amount.trim());
+      body.append("expenseDate", expenseForm.expenseDate);
+      if (expenseForm.description?.trim()) body.append("description", expenseForm.description.trim());
+      if (expenseForm.receipt) body.append("receipt", expenseForm.receipt);
+      await api.post("/expenses", body, { headers: authHeaders });
+      setExpenseForm({ title: "", amount: "", expenseDate: "", description: "", receipt: null });
+      showMessage("Expense submitted for approval");
+      await fetchAll();
+      navigate("/expenses/list");
+    } catch (err) {
+      showMessage(err.response?.data?.message || "Could not submit expense", "error");
+    }
+  }
+
+  async function updateExpenseStatus(id, status) {
+    const note = (expenseNotes[id] || "").trim();
+    if (!note) {
+      showMessage("Please add a note before approving or rejecting the expense", "error");
+      return;
+    }
+    try {
+      await api.patch(`/expenses/${id}/status`, { status, note }, { headers: authHeaders });
+      setExpenseNotes((prev) => ({ ...prev, [id]: "" }));
+      showMessage(`Expense ${status.toLowerCase()}`);
+      fetchAll();
+    } catch (err) {
+      showMessage(err.response?.data?.message || "Could not update expense", "error");
+    }
+  }
+
   async function applyReferenceLetter(e) {
     e.preventDefault();
     const validation = validateReferenceForm(referenceForm);
@@ -649,6 +724,7 @@ export function useHrPortal() {
     leaves: true,
     salary: true,
     letters: true,
+    expenses: true,
   });
 
   useEffect(() => {
@@ -659,6 +735,7 @@ export function useHrPortal() {
       ...(p.startsWith("/leaves") ? { leaves: true } : {}),
       ...(p.startsWith("/salary-slips") ? { salary: true } : {}),
       ...(p.startsWith("/reference-letters") ? { letters: true } : {}),
+      ...(p.startsWith("/expenses") ? { expenses: true } : {}),
     }));
   }, [location.pathname]);
 
@@ -674,6 +751,7 @@ export function useHrPortal() {
 
   const pendingLeavesCount = leaves.filter((item) => item.status === "Pending").length;
   const approvedLeavesCount = leaves.filter((item) => item.status === "Approved").length;
+  const pendingExpensesCount = expenses.filter((item) => item.status === "Pending").length;
 
   return {
     navigate,
@@ -686,6 +764,7 @@ export function useHrPortal() {
     leaves,
     slips,
     referenceLetters,
+    expenses,
     message,
     messageVariant,
     setMessage,
@@ -703,6 +782,8 @@ export function useHrPortal() {
     setLeaveFormErrors,
     referenceFormErrors,
     setReferenceFormErrors,
+    expenseFormErrors,
+    setExpenseFormErrors,
     payrollFormErrors,
     setPayrollFormErrors,
     employeeForm,
@@ -719,6 +800,10 @@ export function useHrPortal() {
     setFilePreview,
     referenceForm,
     setReferenceForm,
+    expenseForm,
+    setExpenseForm,
+    expenseNotes,
+    setExpenseNotes,
     referenceNotes,
     setReferenceNotes,
     salaryCalcForm,
@@ -741,7 +826,12 @@ export function useHrPortal() {
     canViewSalarySection,
     canViewLettersSection,
     canApplyLeave,
+    canSubmitExpenses,
+    canViewAllExpenses,
+    canApproveExpenses,
+    canViewExpensesSection,
     pendingLeavesCount,
+    pendingExpensesCount,
     approvedLeavesCount,
     login,
     logout,
@@ -761,6 +851,8 @@ export function useHrPortal() {
     submitLeaveDecisionFromModal,
     openFilePreview,
     closeFilePreview,
+    submitExpense,
+    updateExpenseStatus,
     applyReferenceLetter,
     updateReferenceStatus,
     generateReferenceLetter,

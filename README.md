@@ -48,9 +48,11 @@ cp server/.env.example server/.env
 cp client/.env.example client/.env
 
 # 3. Run both apps in two terminals
-cd server && npm run dev     # http://localhost:5000
+cd server && npm run dev     # http://localhost:5001 (see note below if 5000 fails)
 cd client && npm run dev     # http://localhost:5173
 ```
+
+**macOS:** If the API does not respond on port 5000, another app (often **AirPlay Receiver**) is using it. Set `PORT=5001` in `server/.env` and `VITE_API_BASE=http://127.0.0.1:5001` in `client/.env`, then restart both apps. Or disable AirPlay Receiver in **System Settings → General → AirDrop & Handoff**.
 
 Default admin login (seeded on first run): `admin@basirah.local` / `admin123`.
 
